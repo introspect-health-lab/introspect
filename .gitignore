@@ -1,0 +1,40 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenv
+venv/
+.venv/
+env/
+env.bak/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Python packaging
+dist/
+build/
+*.egg-info/
+
+# Environment & secrets
+.env
+.env.*
+
+# SQLite / DB files
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# Coverage
+htmlcov/
+.coverage
+
+# Migrations (if using Alembic, keep migrations folder if you want)
+alembic/versions/*.pyc
+
+# macOS
+.DS_Store

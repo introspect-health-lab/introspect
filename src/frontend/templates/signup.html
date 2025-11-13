@@ -1,20 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Sign Up - Introspect{% endblock %}
+{% block title %}Sign Up - introspect{% endblock %}
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-cyan-50 to-blue-100">
     <div class="max-w-md w-full space-y-8">
         <!-- Logo/Header -->
         <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-                </svg>
-            </div>
-            <h2 class="mt-6 text-3xl font-extrabold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                Introspect
-            </h2>
+            <a href="/" class="inline-block mb-6">
+                <img src="/static/images/introspect-logo.png" alt="introspect" class="h-16 mx-auto">
+            </a>
             <p class="mt-2 text-sm text-gray-600">
                 Join the malaria diagnostics platform
             </p>

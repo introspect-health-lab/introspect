@@ -2,6 +2,40 @@
  * Blood smear analysis functionality
  */
 
+// Track current input method
+let currentInputMethod = 'upload';
+
+function selectInputMethod(method) {
+    currentInputMethod = method;
+
+    // Update button styles
+    const cameraBtn = document.getElementById('btn-camera');
+    const uploadBtn = document.getElementById('btn-upload');
+    const cameraSection = document.getElementById('camera-section');
+    const uploadSection = document.getElementById('upload-section');
+    const imageUpload = document.getElementById('image-upload');
+
+    if (method === 'camera') {
+        cameraBtn.classList.add('active', 'border-cyan-500', 'bg-cyan-50');
+        cameraBtn.classList.remove('border-gray-300');
+        uploadBtn.classList.remove('active', 'border-cyan-500', 'bg-cyan-50');
+        uploadBtn.classList.add('border-gray-300');
+
+        cameraSection.classList.remove('hidden');
+        uploadSection.classList.add('hidden');
+        imageUpload.removeAttribute('required');
+    } else {
+        uploadBtn.classList.add('active', 'border-cyan-500', 'bg-cyan-50');
+        uploadBtn.classList.remove('border-gray-300');
+        cameraBtn.classList.remove('active', 'border-cyan-500', 'bg-cyan-50');
+        cameraBtn.classList.add('border-gray-300');
+
+        uploadSection.classList.remove('hidden');
+        cameraSection.classList.add('hidden');
+        imageUpload.setAttribute('required', 'required');
+    }
+}
+
 async function loadUserInfo() {
     try {
         const response = await authenticatedFetch('/users/me');
@@ -77,57 +111,83 @@ function previewImage(event) {
 
 document.getElementById('analyze-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target);
     const patientId = formData.get('patient_id');
-    
+
     if (!patientId) {
         showToast('Please select a patient', 'error');
         return;
     }
-    
-    const imageFile = formData.get('image');
-    if (!imageFile || imageFile.size === 0) {
-        showToast('Please select an image', 'error');
-        return;
+
+    // Validate based on input method
+    if (currentInputMethod === 'upload') {
+        const imageFile = formData.get('image');
+        if (!imageFile || imageFile.size === 0) {
+            showToast('Please select an image', 'error');
+            return;
+        }
     }
-    
+
     // Show loading state
     const submitBtn = document.getElementById('submit-btn');
     const submitText = document.getElementById('submit-text');
     const submitLoading = document.getElementById('submit-loading');
-    
+
     submitBtn.disabled = true;
     submitText.classList.add('hidden');
     submitLoading.classList.remove('hidden');
-    
+
     try {
-        // Note: We need to get clinic_id - for now using a placeholder
-        // In production, this should come from the user's profile or be selected
+        // Get user info for clinic_id
         const userResponse = await authenticatedFetch('/users/me');
         const user = await userResponse.json();
-        
-        // Create form data for multipart upload
-        const uploadData = new FormData();
-        uploadData.append('image', imageFile);
-        uploadData.append('patient_id', patientId);
-        uploadData.append('clinic_id', user.clinic_id || '00000000-0000-0000-0000-000000000000'); // Placeholder
-        
-        const symptoms = formData.get('symptoms');
-        if (symptoms) {
-            uploadData.append('symptoms', symptoms);
+
+        let response;
+
+        if (currentInputMethod === 'camera') {
+            // Camera capture mode - use capture-and-analyze endpoint
+            const captureData = new FormData();
+            captureData.append('patient_id', patientId);
+            captureData.append('clinic_id', user.clinic_id || '00000000-0000-0000-0000-000000000000');
+
+            const symptoms = formData.get('symptoms');
+            if (symptoms) {
+                captureData.append('symptoms', symptoms);
+            }
+
+            const notes = formData.get('notes');
+            if (notes) {
+                captureData.append('notes', notes);
+            }
+
+            response = await authenticatedFetch('/api/results/capture-and-analyze', {
+                method: 'POST',
+                body: captureData
+            });
+        } else {
+            // Upload mode - use analyze endpoint
+            const imageFile = formData.get('image');
+            const uploadData = new FormData();
+            uploadData.append('image', imageFile);
+            uploadData.append('patient_id', patientId);
+            uploadData.append('clinic_id', user.clinic_id || '00000000-0000-0000-0000-000000000000');
+
+            const symptoms = formData.get('symptoms');
+            if (symptoms) {
+                uploadData.append('symptoms', symptoms);
+            }
+
+            const notes = formData.get('notes');
+            if (notes) {
+                uploadData.append('notes', notes);
+            }
+
+            response = await authenticatedFetch('/api/results/analyze', {
+                method: 'POST',
+                body: uploadData
+            });
         }
-        
-        const notes = formData.get('notes');
-        if (notes) {
-            uploadData.append('notes', notes);
-        }
-        
-        const response = await authenticatedFetch('/api/results/analyze', {
-            method: 'POST',
-            body: uploadData
-            // Don't set Content-Type header - browser will set it with boundary
-        });
         
         if (response.ok) {
             const result = await response.json();

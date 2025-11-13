@@ -16,3 +16,12 @@ numpy
 tensorflow
 python-magic
 aiofiles
+
+# YOLOv11 and Edge AI dependencies
+ultralytics>=8.0.0
+opencv-python
+torch
+torchvision
+
+# Raspberry Pi Camera Module 3 (install only on Raspberry Pi)
+# picamera2  # Uncomment when deploying to Raspberry Pi

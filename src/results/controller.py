@@ -33,11 +33,45 @@ async def analyze_image(
         notes=notes,
         symptoms=symptoms
     )
-    
+
     test_result, confidence, processing_time = service.create_test_result_from_analysis(
         current_user, db, analysis_request, image
     )
-    
+
+    return models.AnalysisResponse(
+        test_result_id=test_result.id,
+        result=test_result.result,
+        confidence_score=confidence,
+        processing_time_ms=processing_time,
+        message=f"Analysis complete: {test_result.result.value}"
+    )
+
+
+@router.post("/capture-and-analyze", response_model=models.AnalysisResponse, status_code=status.HTTP_201_CREATED)
+async def capture_and_analyze(
+    db: DbSession,
+    current_user: CurrentUser,
+    patient_id: UUID = Form(...),
+    clinic_id: UUID = Form(...),
+    notes: Optional[str] = Form(None),
+    symptoms: Optional[str] = Form(None),
+):
+    """
+    Capture an image from Raspberry Pi camera and analyze for malaria detection.
+    This endpoint is designed for edge AI deployment on Raspberry Pi 5 with Camera Module 3.
+    Returns the analysis result and creates a test result record.
+    """
+    analysis_request = models.AnalysisRequest(
+        patient_id=patient_id,
+        clinic_id=clinic_id,
+        notes=notes,
+        symptoms=symptoms
+    )
+
+    test_result, confidence, processing_time = service.create_test_result_from_camera_capture(
+        current_user, db, analysis_request
+    )
+
     return models.AnalysisResponse(
         test_result_id=test_result.id,
         result=test_result.result,

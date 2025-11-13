@@ -16,7 +16,7 @@ from pathlib import Path
 configure_logging(LogLevels.info)
 
 app = FastAPI(
-    title="Introspect Malaria Diagnostics API",
+    title="introspect - Malaria Diagnostics API",
     description="API for malaria diagnostics and surveillance using AI-powered blood smear analysis",
     version="1.0.0"
 )

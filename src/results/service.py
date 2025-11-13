@@ -8,6 +8,7 @@ from src.entities.test_result import TestResult, TestStatus, SyncStatus
 from src.auth.models import TokenData
 from src.infrastructure.ai_inference import get_inference_service, InferenceResult
 from src.infrastructure.file_storage import get_storage_service
+from src.infrastructure.camera_service import get_camera_service
 from src.exceptions import TestResultNotFoundError, TestResultCreationError
 import logging
 import tempfile
@@ -91,6 +92,91 @@ def create_test_result_from_analysis(
                 
     except Exception as e:
         logging.error(f"Failed to create test result from analysis. Error: {str(e)}")
+        db.rollback()
+        raise TestResultCreationError(str(e))
+
+
+def create_test_result_from_camera_capture(
+    current_user: TokenData,
+    db: Session,
+    analysis_request: models.AnalysisRequest,
+) -> tuple[TestResult, float, float]:
+    """
+    Create a test result by capturing an image from Raspberry Pi camera and analyzing it.
+
+    Returns:
+        Tuple of (test_result, confidence_score, processing_time_ms)
+    """
+    try:
+        # Get services
+        camera_service = get_camera_service()
+        inference_service = get_inference_service()
+        storage_service = get_storage_service()
+
+        # Capture image from camera
+        temp_image_path = camera_service.capture_image()
+
+        try:
+            # Validate image
+            if not inference_service.validate_image(temp_image_path):
+                raise ValueError("Invalid image captured from camera")
+
+            # Run AI inference
+            inference_result, confidence, processing_time = inference_service.analyze_image(temp_image_path)
+
+            # Map inference result to TestStatus
+            result_mapping = {
+                InferenceResult.POSITIVE: TestStatus.Positive,
+                InferenceResult.NEGATIVE: TestStatus.Negative,
+                InferenceResult.INCONCLUSIVE: TestStatus.Inconclusive,
+            }
+            test_status = result_mapping[inference_result]
+
+            # Read captured image for storage
+            with open(temp_image_path, 'rb') as f:
+                file_content = f.read()
+
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"camera_capture_{timestamp}.jpg"
+
+            # Save image to permanent storage
+            image_path, image_filename = storage_service.save_image(
+                file_content,
+                filename,
+                str(analysis_request.clinic_id)
+            )
+
+            # Create test result record
+            new_result = TestResult(
+                patient_id=analysis_request.patient_id,
+                clinic_id=analysis_request.clinic_id,
+                health_worker_id=current_user.get_uuid(),
+                result=test_status,
+                confidence_score=confidence,
+                image_path=image_path,
+                image_filename=image_filename,
+                model_version=inference_service.model_version,
+                processing_time_ms=processing_time,
+                notes=analysis_request.notes,
+                symptoms=analysis_request.symptoms,
+                sync_status=SyncStatus.Pending,
+            )
+
+            db.add(new_result)
+            db.commit()
+            db.refresh(new_result)
+
+            logging.info(f"Created test result {new_result.id} from camera capture with status {test_status.value}")
+            return new_result, confidence, processing_time
+
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_image_path):
+                os.unlink(temp_image_path)
+
+    except Exception as e:
+        logging.error(f"Failed to create test result from camera capture. Error: {str(e)}")
         db.rollback()
         raise TestResultCreationError(str(e))
 

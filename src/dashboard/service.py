@@ -165,15 +165,17 @@ def get_time_series_data(db: Session, days: int = 30, district: Optional[str] = 
     query = query.group_by(func.date(TestResult.test_date)).order_by(func.date(TestResult.test_date))
     
     results = query.all()
-    
+
     time_series = []
     for row in results:
+        # row.date is already a string from func.date() in SQLite
+        date_str = row.date if isinstance(row.date, str) else row.date.strftime('%Y-%m-%d')
         time_series.append(models.TimeSeriesData(
-            date=row.date.strftime('%Y-%m-%d'),
+            date=date_str,
             positive_cases=row.positive_cases,
             negative_cases=row.negative_cases,
             total_tests=row.total_tests
         ))
-    
+
     return time_series
 

@@ -1,15 +1,17 @@
-# Introspect - Malaria Diagnostics & Surveillance System
+# introspect - AI-Powered Malaria Diagnostics & Surveillance System
 
-**Introspect** is an AI-powered malaria diagnostics and surveillance API built with Clean Architecture principles. It supports blood smear image analysis using AI models, patient management, and real-time surveillance dashboards for malaria outbreak monitoring.
+**introspect** is an edge AI-powered malaria diagnostics and surveillance platform built with Clean Architecture principles. It supports blood smear image analysis using YOLOv11 on Raspberry Pi 5, patient management, and real-time surveillance dashboards for malaria outbreak monitoring.
 
 ## 🎯 Project Overview
 
 This system enables:
-- **AI-Powered Diagnostics**: Upload blood smear images (from OpenFlexure Microscope) and get instant malaria detection results
+- **Edge AI Diagnostics**: YOLOv11-powered malaria detection on Raspberry Pi 5 with Camera Module 3
+- **Dual Input Modes**: Direct camera capture or image upload for maximum flexibility
 - **Patient Management**: Track patient information and test history
 - **Surveillance Dashboard**: Monitor malaria cases by district, clinic, and time period
-- **Offline-First**: Sync capability for areas with intermittent connectivity
-- **Flutter Integration**: RESTful API designed for Flutter mobile/web frontends
+- **Offline-First**: Full functionality without internet connectivity, with sync capability
+- **Web Interface**: Complete web UI with authentication and role-based access
+- **RESTful API**: Designed for integration with mobile/web frontends
 
 ## 🏗️ Architecture
 
@@ -32,7 +34,8 @@ Business logic services:
 
 ### Infrastructure Layer (`src/infrastructure/`)
 External services and integrations:
-- `ai_inference.py` - AI model inference (placeholder for TensorFlow Lite)
+- `ai_inference.py` - YOLOv11 model inference for malaria detection
+- `camera_service.py` - Raspberry Pi Camera Module 3 integration
 - `file_storage.py` - Blood smear image storage
 - `sync_service.py` - Offline synchronization
 
@@ -40,69 +43,85 @@ External services and integrations:
 FastAPI REST endpoints:
 - `/api/auth` - Authentication (JWT)
 - `/api/patients` - Patient CRUD operations
-- `/api/results` - Test results and analysis
+- `/api/results/analyze` - Upload and analyze blood smear images
+- `/api/results/capture-and-analyze` - Capture from camera and analyze
 - `/api/clinics` - Clinic management
 - `/api/dashboard` - Surveillance analytics
 - `/api/sync` - Offline sync operations
 
-## 🚀 Getting Started
+## 🚀 Quick Start
+
+See **`QUICK_START.md`** for detailed setup instructions.
 
 ### Prerequisites
 - Python 3.11+
-- Docker & Docker Compose (for PostgreSQL)
-- Or SQLite for local development
+- (Optional) Raspberry Pi 5 with Camera Module 3 for edge AI
+- (Optional) Docker & Docker Compose for PostgreSQL
 
 ### Installation
 
-1. **Clone the repository**
 ```bash
+# Clone repository
 git clone <repository-url>
-cd clean-architecture
-```
+cd introspect
 
-2. **Install dependencies**
-```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-# For development (includes pytest)
-pip install -r requirements-dev.txt
-```
 
-### Running the Application
+# Initialize database
+python create_tables.py
 
-#### Option 1: Docker with PostgreSQL (Production-like)
-```bash
-# Start all services (API + PostgreSQL)
-docker compose up --build
-
-# Stop services
-docker compose down
-```
-
-The API will be available at `http://localhost:8000`
-
-#### Option 2: Local Development with SQLite
-```bash
-# The default configuration uses SQLite (introspect.db)
+# Start application
 uvicorn src.main:app --reload
 ```
 
+Access the application at: **http://localhost:8000**
+
+### 📚 Documentation
+
+- **`QUICK_START.md`** - Get started in 5 minutes
+- **`EDGE_AI_INTEGRATION_SUMMARY.md`** - Complete implementation overview
+- **`RASPBERRY_PI_SETUP.md`** - Raspberry Pi 5 deployment guide
+- **`LOGO_SETUP.md`** - Logo integration instructions
+- **`models/README.md`** - YOLOv11 model documentation
+
 ### API Documentation
 
-Once running, visit:
+Interactive API documentation:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
 ## 📊 Core Features
 
-### 1. Image Upload & Analysis
+### 1. Edge AI Malaria Detection
+
+**Camera Capture Mode** (Raspberry Pi 5):
+```bash
+POST /api/results/capture-and-analyze
+```
+- Captures image directly from Camera Module 3
+- Runs YOLOv11 inference on-device
+- No internet required
+- Instant results
+
+**Upload Mode** (Any device):
 ```bash
 POST /api/results/analyze
 ```
-Upload a blood smear image and receive:
-- Malaria detection result (Positive/Negative/Inconclusive)
-- AI confidence score
-- Processing time
+- Upload blood smear images
+- YOLOv11 malaria parasite detection
+- Confidence scores and bounding boxes
 - Automatic test result record creation
+
+Both modes return:
+- Detection result (Positive/Negative/Inconclusive)
+- Confidence score
+- Processing time
+- Detailed detection metadata
 
 ### 2. Patient Management
 ```bash
@@ -204,45 +223,122 @@ clean-architecture/
 
 ## 🔧 Configuration
 
-### Database
-Edit `src/database/core.py` to configure database:
-- **SQLite** (default): `sqlite:///./introspect.db`
-- **PostgreSQL**: Set `DATABASE_URL` environment variable
-
 ### Environment Variables
 Create a `.env` file:
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/introspect
+# Database
+DATABASE_URL=sqlite:///./introspect.db
+
+# YOLOv11 Model
+YOLO_MODEL_PATH=models/malaria_yolov11.pt
+YOLO_CONFIDENCE_THRESHOLD=0.25
+YOLO_IOU_THRESHOLD=0.45
+YOLO_IMAGE_SIZE=640
+
+# JWT Secret
 SECRET_KEY=your-secret-key-here
+
+# Optional: Central server for sync
+CENTRAL_SERVER_URL=https://your-server.com
 ```
 
-## 🤖 AI Model Integration
+## 🤖 YOLOv11 Model Integration
 
-The current implementation includes a **placeholder AI inference service**. To integrate a real model:
+### Adding Your Model
 
-1. Train or obtain a TensorFlow Lite model for malaria detection
-2. Place the `.tflite` file in the project
-3. Update `src/infrastructure/ai_inference.py`:
-   - Uncomment TensorFlow Lite loading code
-   - Configure model path
-   - Adjust preprocessing for your model's requirements
+1. **Train YOLOv11 model** for malaria detection (see `models/README.md`)
+2. **Place model file** in `models/malaria_yolov11.pt`
+3. **Configure path** in `.env` file
+4. **Restart application** - model loads automatically
 
-## 📱 Flutter Frontend Integration
+### Model Training
 
-The API is designed for Flutter integration:
+```python
+from ultralytics import YOLO
+
+# Load pretrained model
+model = YOLO('yolov11n.pt')
+
+# Train on malaria dataset
+results = model.train(
+    data='data.yaml',
+    epochs=100,
+    imgsz=640
+)
+
+# Export for deployment
+model.export(format='onnx')  # For Raspberry Pi
+```
+
+See `models/README.md` for detailed training instructions.
+
+### Placeholder Mode
+
+If no model is found, the system automatically uses placeholder mode:
+- Generates random results for testing
+- Perfect for development and UI testing
+- No actual inference performed
+
+## 🎨 Web Interface
+
+Complete web UI included:
+- **Landing Page** - Overview and features
+- **Authentication** - Sign in/Sign up with JWT
+- **Dashboard** - Surveillance analytics and statistics
+- **Patient Management** - Add, view, edit patients
+- **Analysis Page** - Dual input mode (camera + upload)
+- **Results History** - View past test results
+- **Responsive Design** - Works on desktop and mobile
+
+## 📱 API Integration
+
+The RESTful API supports integration with:
+- Flutter mobile apps
+- React/Vue/Angular web apps
+- Third-party systems
+- IoT devices
+
+Features:
 - CORS enabled for cross-origin requests
-- RESTful endpoints with JSON responses
+- JSON responses
 - JWT authentication
-- File upload support for images
-- Comprehensive error responses
+- File upload support
+- Comprehensive error handling
 
 ## 🛣️ Roadmap
 
-- [ ] Integrate real TensorFlow Lite malaria detection model
-- [ ] Add image quality validation
-- [ ] Implement batch analysis
-- [ ] Add export functionality (PDF reports, CSV data)
+- [x] YOLOv11 integration for malaria detection
+- [x] Raspberry Pi 5 + Camera Module 3 support
+- [x] Dual input mode (camera + upload)
+- [x] Web interface with authentication
+- [ ] Image quality validation
+- [ ] Batch analysis
+- [ ] PDF report generation
 - [ ] Enhanced offline sync with conflict resolution
 - [ ] Real-time notifications for outbreak alerts
 - [ ] Multi-language support
 - [ ] Advanced analytics and ML insights
+- [ ] Mobile app (Flutter)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
+
+[Your License Here]
+
+## 📞 Support
+
+For questions or issues:
+- Check documentation files
+- Review API docs at `/docs`
+- Open an issue on GitHub
+
+---
+
+**Built with ❤️ for malaria elimination**
